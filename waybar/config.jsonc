@@ -1,0 +1,96 @@
+// ~/.config/waybar/config.jsonc — Waybar pour Hyprland
+{
+  "layer": "top",
+  "output": "DP-1",
+  "position": "top",
+  "height": 30,
+  "spacing": 4,
+
+  "modules-left":   ["custom/menu", "hyprland/workspaces", "hyprland/window"],
+  "modules-center": ["clock"],
+  "modules-right":  ["custom/radio", "idle_inhibitor", "pulseaudio", "network", "power-profiles-daemon",
+                     "cpu", "memory", "temperature", "tray", "custom/power"],
+
+  // Bouton menu des applications
+  "custom/menu": {
+    "format": "  Menu",
+    "on-click": "fuzzel",
+    "tooltip": false
+  },
+
+   // Bureaux Hyprland : 1 à 4, toujours affichés
+  "hyprland/workspaces": {
+    "format": "{id}",
+    "persistent-workspaces": { "*": 4 },
+    "ignore-workspaces": ["^([5-9]|10)$"],
+    "sort-by": "id",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+  },
+
+  // Titre de la fenêtre active
+  "hyprland/window": {
+    "max-length": 50,
+    "separate-outputs": true
+  },
+
+  "clock": {
+    "format": "{:%a %d %b  %H:%M}",
+    "locale": "fr_FR.UTF-8",
+    "tooltip-format": "<tt>{calendar}</tt>"
+  },
+
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": { "activated": "\uf06e", "deactivated": "\uf070" },
+    "tooltip-format-activated": "Veille bloquée",
+    "tooltip-format-deactivated": "Veille autorisée"
+  },
+
+  "pulseaudio": {
+    "format": "{volume}% {icon}  {format_source}",
+    "format-muted": "muet   {format_source}",
+    "format-source": "{volume}% ",
+    "format-source-muted": "",
+    "format-icons": { "default": ["", "", ""] },
+    "on-click": "pavucontrol"
+  },
+
+  "network": {
+    "format-wifi": "{essid} ({signalStrength}%) ",
+    "format-ethernet": "Filaire ",
+    "format-disconnected": "Hors ligne ⚠",
+    "tooltip-format": "{ifname} : {ipaddr}",
+    "on-click": "nm-connection-editor"
+  },
+
+  "power-profiles-daemon": {
+    "format": "{icon}",
+    "format-icons": { "performance": "", "balanced": "", "power-saver": "" },
+    "tooltip-format": "Profil : {profile}"
+  },
+
+  "cpu":         { "format": "{usage}% ", "interval": 5 },
+  "memory":      { "format": "{}% ",      "interval": 5 },
+  "temperature": { "format": "{temperatureC}°C ", "critical-threshold": 80 },
+
+  "tray": { "spacing": 8 },
+
+  // Radio en cours (script ~/.config/hypr/radio.sh)
+  "custom/radio": {
+    "exec": "~/.config/hypr/radio.sh status",
+    "interval": 10,
+    "signal": 8,
+    "format": "♪ {}",
+    "tooltip-format": "Clic : changer de radio — clic droit : arrêter",
+    "on-click": "~/.config/hypr/radio.sh",
+    "on-click-right": "~/.config/hypr/radio.sh stop"
+  },
+
+  // Menu d'extinction (script ~/.config/waybar/powermenu.sh)
+  "custom/power": {
+    "format": "⏻",
+    "on-click": "~/.config/waybar/powermenu.sh",
+    "tooltip": false
+  }
+}

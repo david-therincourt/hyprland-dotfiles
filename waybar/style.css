@@ -1,0 +1,62 @@
+/* ~/.config/waybar/style.css — style sombre, modules en « pastilles » */
+* {
+  font-family: "DejaVu Sans", "Font Awesome 6 Free", sans-serif;
+  font-size: 13px;
+  min-height: 0;
+}
+
+window#waybar {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #e0e0e0;
+}
+
+#custom-menu, #workspaces, #window, #clock, #idle_inhibitor, #pulseaudio,
+#network, #power-profiles-daemon, #cpu, #memory, #temperature, #tray,
+#custom-power, #custom-radio {
+  padding: 0 10px;
+  margin: 3px 0;
+  border-radius: 8px;
+  background: #313244;
+}
+
+#custom-menu        { background: #1e88a8; color: #ffffff; }
+#workspaces button {
+  padding: 0 8px;
+  margin: 0 2px;
+  min-width: 14px;              /* largeur fixe : le gras ne décale rien */
+  color: #6c7086;               /* bureau vide : grisé */
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  border-bottom: 2px solid transparent;
+  box-shadow: none;
+  text-shadow: none;
+}
+#workspaces button:not(.empty) {
+  color: #cdd6f4;               /* bureau avec des fenêtres */
+}
+#workspaces button.active {
+  background: #1e88a8;          /* bureau en cours */
+  color: #ffffff;
+  font-weight: bold;
+  /*border-bottom: 2px solid #89dceb;*/
+}
+#workspaces button:hover {
+  background: #45475a;
+  color: #ffffff;
+}
+#workspaces button.urgent {
+  background: #e64553;
+  color: #ffffff;
+}
+window#waybar.empty #window { background: transparent; padding: 0; }
+#pulseaudio         { color: #f9e2af; }
+#network            { color: #89b4fa; }
+#cpu                { color: #a6e3a1; }
+#memory             { color: #cba6f7; }
+#temperature        { color: #fab387; }
+#temperature.critical { background: #e64553; color: #ffffff; }
+#custom-power       { color: #f38ba8; }
+#custom-radio       { color: #94e2d5; }
