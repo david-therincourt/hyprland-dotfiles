@@ -4,6 +4,9 @@
 --   | gauche |      centre      | droite |
 --
 -- • Colonnes fixes : la fenêtre centrale ne bouge jamais d'elle-même.
+-- • Nouvelle fenêtre : toujours au centre (new_on_center), l'ancienne
+--   centrale passe sur le côté selon l'ordre de remplissage.
+-- • Chaque bureau a son propre état (colonnes, largeurs, extension).
 -- • swapmaster      : échange RÉEL de places avec la fenêtre centrale
 --                     (relancé depuis le centre → annule l'échange).
 -- • move <dir>      : left/right fait passer la fenêtre d'une colonne de côté
@@ -28,23 +31,60 @@
 --   require("mastercenter")
 --   hl.config({ general = { layout = "lua:mastercenter" } })
 
-local state = {
-    center = nil,        -- identifiant de la fenêtre centrale
-    left = {},           -- colonne gauche (de haut en bas)
-    right = {},          -- colonne droite (de haut en bas)
-    left_w = 0.275,      -- largeur de la colonne gauche (fraction de l'écran)
-    right_w = 0.275,     -- largeur de la colonne droite (le centre prend le reste)
-    weight = {},         -- hauteur relative de chaque fenêtre de côté (1 par défaut)
-    extend = nil,        -- nil | "left" | "right" : colonne recouverte par le centre
-    moved = nil,         -- fenêtres déplacées par « extend » (pour les remettre)
-    keep_empty = true,   -- true : le centre reste vide quand sa fenêtre se ferme
-    opener = "right",    -- côté de la 2ᵉ fenêtre (la première de côté)
-    first = "left",      -- ensuite, côté prioritaire à égalité : "left" ou "right"
-    single_full = false, -- true : une fenêtre seule occupe tout l'écran
-    last_swap = nil,     -- { col, idx } du dernier échange (pour annuler)
-    pending = {},        -- liste de { col, after } : places réservées par « split »
-    count = 0,
-}
+-- Un état par bureau : chaque bureau garde ses colonnes, largeurs et extension.
+local function new_state()
+    return {
+        center = nil,        -- identifiant de la fenêtre centrale
+        left = {},           -- colonne gauche (de haut en bas)
+        right = {},          -- colonne droite (de haut en bas)
+        left_w = 0.275,      -- largeur de la colonne gauche (fraction de l'écran)
+        right_w = 0.275,     -- largeur de la colonne droite (le centre prend le reste)
+        weight = {},         -- hauteur relative de chaque fenêtre de côté (1 par défaut)
+        extend = nil,        -- nil | "left" | "right" : colonne recouverte par le centre
+        moved = nil,         -- fenêtres déplacées par « extend » (pour les remettre)
+        new_on_center = true, -- true : une nouvelle fenêtre prend toujours le centre
+        keep_empty = true,   -- true : le centre reste vide quand sa fenêtre se ferme
+        opener = "right",    -- côté de la 2ᵉ fenêtre (la première de côté)
+        first = "left",      -- ensuite, côté prioritaire à égalité : "left" ou "right"
+        single_full = false, -- true : une fenêtre seule occupe tout l'écran
+        last_swap = nil,     -- { col, idx } du dernier échange (pour annuler)
+        pending = {},        -- liste de { col, after } : places réservées par « split »
+        count = 0,
+    }
+end
+
+local states = {}            -- un état par bureau occupé
+local state = new_state()    -- état du bureau en cours de traitement
+
+-- Retrouve l'état du bureau d'après ses fenêtres (celui qui en contient le plus)
+local function select_state(ctx)
+    local ids = {}
+    for _, target in ipairs(ctx.targets) do
+        local w = target.window
+        ids[w and tostring(w.stable_id) or tostring(target.index)] = true
+    end
+    local best, score = nil, 0
+    for _, st in ipairs(states) do
+        local n = (st.center and ids[st.center]) and 1 or 0
+        for _, id in ipairs(st.left) do if ids[id] then n = n + 1 end end
+        for _, id in ipairs(st.right) do if ids[id] then n = n + 1 end end
+        if n > score then best, score = st, n end
+    end
+    if not best then
+        best = new_state()
+        table.insert(states, best)
+    end
+    state = best
+end
+
+-- Oublie les états des bureaux devenus vides
+local function drop_empty()
+    local out = {}
+    for _, st in ipairs(states) do
+        if st.center or #st.left > 0 or #st.right > 0 then table.insert(out, st) end
+    end
+    states = out
+end
 
 ---------------------------------------------------------------- utilitaires
 
@@ -141,29 +181,39 @@ local function sync(ctx)
     end
     state.pending = still
 
+    -- range une fenêtre dans une colonne de côté, selon l'ordre de remplissage
+    local function to_side(id)
+        if #state.pending > 0 then
+            local p = table.remove(state.pending, 1)   -- première réservée, première remplie
+            local col = column(p.col)
+            local i = index_of(col, p.after)
+            table.insert(col, (i or #col) + 1, id)
+        elseif state.extend then
+            -- centre étendu : une seule colonne de côté disponible
+            table.insert(column(state.extend == "right" and "left" or "right"), id)
+        elseif #state.left + #state.right == 0 then
+            table.insert(column(state.opener), id)   -- 2ᵉ fenêtre
+        else
+            local a, b = sides()   -- à égalité, le côté prioritaire l'emporte
+            if #a <= #b then
+                table.insert(a, id)
+            else
+                table.insert(b, id)
+            end
+        end
+    end
+
     -- placer les nouvelles fenêtres
     for _, target in ipairs(ctx.targets) do
         local id = target_id(target)
         if not locate(id) then
             if not state.center then
                 state.center = id
-            elseif #state.pending > 0 then
-                local p = table.remove(state.pending, 1)   -- première réservée, première remplie
-                local col = column(p.col)
-                local i = index_of(col, p.after)
-                table.insert(col, (i or #col) + 1, id)
-            elseif state.extend then
-                -- centre étendu : une seule colonne de côté disponible
-                table.insert(column(state.extend == "right" and "left" or "right"), id)
-            elseif #state.left + #state.right == 0 then
-                table.insert(column(state.opener), id)   -- 2ᵉ fenêtre
+            elseif state.new_on_center then
+                to_side(state.center)              -- l'ancien centre passe sur le côté
+                state.center = id
             else
-                local a, b = sides()   -- à égalité, le côté prioritaire l'emporte
-                if #a <= #b then
-                    table.insert(a, id)
-                else
-                    table.insert(b, id)
-                end
+                to_side(id)
             end
         end
     end
@@ -226,7 +276,9 @@ end
 
 hl.layout.register("mastercenter", {
     recalculate = function(ctx)
+        select_state(ctx)
         local targets = sync(ctx)
+        drop_empty()
         local n = (state.center and 1 or 0) + #state.left + #state.right
         if n == 0 then
             return
@@ -263,6 +315,7 @@ hl.layout.register("mastercenter", {
     end,
 
     layout_msg = function(ctx, msg)
+        select_state(ctx)
         local command, arg = msg:match("^(%S+)%s*(%S*)")
         local id = active_id(ctx)
         local where, i = locate(id)
