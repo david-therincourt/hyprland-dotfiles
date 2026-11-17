@@ -5,6 +5,8 @@
   min-height: 0;
 }
 
+#power-profiles-daemon { font-weight: 900; }
+
 window#waybar {
   background: transparent;
   border: none;
