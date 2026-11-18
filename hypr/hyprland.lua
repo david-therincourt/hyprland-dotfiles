@@ -38,7 +38,7 @@ hl.monitor({
 local terminal    = "kitty"
 local fileManager = "nautilus"
 local menu        = "fuzzel"   -- hyprlauncher n'est pas installé
-
+local mail        = "flatpak run org.mozilla.thunderbird_esr"
 
 -------------------
 ---- AUTOSTART ----
@@ -242,7 +242,7 @@ hl.config({
         kb_rules   = "",
 	numlock_by_default = true,   -- pavé numérique activé au démarrage
 	
-        follow_mouse = 1,
+        follow_mouse = 2,   -- focus au clic seulement
 
         sensitivity = 0, -- -1.0 - 1.0, 0 means no modification.
 
@@ -278,6 +278,7 @@ hl.gesture({
 
 local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(mail))
 -- Example binds, see https://wiki.hypr.land/Configuring/Basics/Binds/ for more
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal))
 local closeWindowBind = hl.bind(mainMod .. " + C", hl.dsp.window.close())
