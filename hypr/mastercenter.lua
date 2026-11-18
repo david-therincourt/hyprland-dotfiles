@@ -40,8 +40,8 @@ local function new_state()
         center = nil,        -- identifiant de la fenêtre centrale
         left = {},           -- colonne gauche (de haut en bas)
         right = {},          -- colonne droite (de haut en bas)
-        left_w = 0.30,      -- largeur de la colonne gauche (fraction de l'écran)
-        right_w = 0.30,     -- largeur de la colonne droite (le centre prend le reste)
+        left_w = 0.315,      -- largeur de la colonne gauche (fraction de l'écran)
+        right_w = 0.315,     -- largeur de la colonne droite (le centre prend le reste)
         weight = {},         -- hauteur relative de chaque fenêtre de côté (1 par défaut)
         extend = nil,        -- nil | "left" | "right" : colonne recouverte par le centre
         moved = nil,         -- fenêtres déplacées par « extend » (pour les remettre)
