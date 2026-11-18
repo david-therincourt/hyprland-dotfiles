@@ -39,6 +39,9 @@ local terminal    = "kitty"
 local fileManager = "nautilus"
 local menu        = "fuzzel"   -- hyprlauncher n'est pas installé
 local mail        = "flatpak run org.mozilla.thunderbird_esr"
+local sync        = "unison-gtk"   -- synchronisation de fichiers
+local browser     = "chromium"
+local radio       = "~/.config/hypr/radio.sh"
 
 -------------------
 ---- AUTOSTART ----
@@ -278,17 +281,24 @@ hl.gesture({
 
 local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 
-hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(mail))
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd(mail))
 -- Example binds, see https://wiki.hypr.land/Configuring/Basics/Binds/ for more
-hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal))
-local closeWindowBind = hl.bind(mainMod .. " + C", hl.dsp.window.close())
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
+local closeWindowBind = hl.bind(mainMod .. " + Q", hl.dsp.window.close())   -- fermer la fenêtre
+hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(browser))                         -- web
+hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(radio))                           -- radio
 -- closeWindowBind:set_enabled(false)
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
+hl.bind(mainMod .. " + BackSpace", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
--- hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
+hl.bind(mainMod .. " + U", hl.dsp.exec_cmd(sync))          -- unison
+
+hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))    -- dwindle only
+
+-- Inversion colonnes gauche/droite
+hl.bind(mainMod .. " + code:94",         hl.dsp.layout("flip"))   -- touche < >
+hl.bind(mainMod .. " + SHIFT + code:94", hl.dsp.layout("flip"))   -- même touche avec Maj
 
 -- Super + V : flottant ↔ tiling ; en flottant → 60 % de large, centrée
 hl.bind(mainMod .. " + V", function()
@@ -357,8 +367,6 @@ if pcall(require, "mastercenter") then
     hl.config({ general = { layout = "lua:mastercenter" } })
     hl.bind(mainMod .. " + Return",      hl.dsp.layout("swapmaster"))
     hl.bind(mainMod .. " + D",           hl.dsp.layout("split"))   -- réserver une place sous la fenêtre
-    hl.bind(mainMod .. " + KP_Add",      hl.dsp.layout("grow"),   { repeating = true })
-    hl.bind(mainMod .. " + KP_Subtract", hl.dsp.layout("shrink"), { repeating = true })
     for _, d in ipairs(directions) do
         hl.bind(mainMod .. " + SHIFT + " .. d, hl.dsp.layout("move " .. d))
     end
@@ -393,7 +401,6 @@ hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = tr
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
-hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("~/.config/hypr/radio.sh"))
 
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----

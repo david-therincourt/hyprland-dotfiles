@@ -21,6 +21,8 @@
 -- • extend <dir>    : le centre recouvre la colonne de droite (ou de gauche),
 --                     dont les fenêtres passent de l'autre côté. Direction
 --                     opposée → retour à la normale, fenêtres remises en place.
+-- • flip            : inverse les colonnes gauche et droite, chaque fenêtre
+--                     garde sa ligne (relancé → retour à l'état initial).
 -- • resize <dir>    : redimensionne la fenêtre active (centre compris) :
 --                     largeur des colonnes avec ←/→, hauteur dans une
 --                     colonne de côté avec ↑/↓.
@@ -434,6 +436,15 @@ hl.layout.register("mastercenter", {
             state.pending = {}
             state.last_swap = nil
 
+        ---------------------------------------------------- flip
+        -- inverse les colonnes gauche et droite (ordre vertical conservé)
+        elseif command == "flip" then
+            local other = { left = "right", right = "left" }
+            state.left, state.right = state.right, state.left
+            state.left_w, state.right_w = state.right_w, state.left_w
+            if state.extend then state.extend = other[state.extend] end
+            for _, p in ipairs(state.pending) do p.col = other[p.col] end
+
         ---------------------------------------------------- largeur
         -- resize <dir> : la flèche déplace la bordure intérieure
         --   centre      : → / ← élargit / rétrécit (des deux côtés)
@@ -463,7 +474,7 @@ hl.layout.register("mastercenter", {
             end
 
         else
-            return "mastercenter: attendu swapmaster, move <dir>, split, extend <dir> ou resize <dir>"
+            return "mastercenter: attendu swapmaster, move <dir>, split, extend <dir>, resize <dir> ou flip"
         end
 
         return true
