@@ -42,6 +42,8 @@ local mail        = "flatpak run org.mozilla.thunderbird_esr"
 local sync        = "unison-gtk"   -- synchronisation de fichiers
 local browser     = "chromium"
 local radio       = "~/.config/hypr/radio.sh"
+local spotify     = "flatpak run com.spotify.Client"
+local claude      = "claude-desktop"
 
 -------------------
 ---- AUTOSTART ----
@@ -102,27 +104,21 @@ hl.config({
     general = {
         gaps_in  = 5,
         gaps_out = 8, 20, 20, 20,
-
         border_size = 2,
-
         col = {
             active_border   = { colors = {"rgba(00d7ffff)", "rgba(ff5fd7ff)"}, angle = 45 },
             inactive_border = "rgba(3a3a3a80)",
         },
-
         -- Set to true to enable resizing windows by clicking and dragging on borders and gaps
         resize_on_border = false,
-
         -- Please see https://wiki.hypr.land/Configuring/Advanced-and-Cool/Tearing/ before you turn this on
         allow_tearing = false,
-
         layout = "dwindle",   -- remplacé par lua:mastercenter si le fichier est présent (voir plus bas)
     },
 
     decoration = {
         rounding       = 10,
         rounding_power = 2,
-
         -- Change transparency of focused and unfocused windows
         active_opacity   = 1.0,
         inactive_opacity = 1.0,
@@ -139,12 +135,13 @@ hl.config({
             size      = 3,
             passes    = 1,
             vibrancy  = 0.1696,
-            -- special   = true,   -- floute derrière « magic »   ← à ajouter
+            special   = true,   -- floute derrière « magic »   ← à ajouter
         },
 	
 	dim_inactive = true,  -- Assombrir les fenêtres inactives
         dim_strength = 0.1,   -- 0.1 léger … 0.3 marqué
         dim_special  = 0.8,   -- opacité du voile : 0 = aucun, 1.0 = masqué
+        -- dim_around = 0.4,
         -- special   = true,   -- floute derrière « magic »   ← à ajouter
     },
 
@@ -281,20 +278,23 @@ hl.gesture({
 
 local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd(mail))
--- Example binds, see https://wiki.hypr.land/Configuring/Basics/Binds/ for more
-hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
 local closeWindowBind = hl.bind(mainMod .. " + Q", hl.dsp.window.close())   -- fermer la fenêtre
-hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(browser))                         -- web
-hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(radio))                           -- radio
--- closeWindowBind:set_enabled(false)
 hl.bind(mainMod .. " + BackSpace", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
-hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
-hl.bind(mainMod .. " + U", hl.dsp.exec_cmd(sync))          -- unison
 
-hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
-hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))    -- dwindle only
+hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))          -- Menu (Fuzzel)
+hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd(terminal))      -- Terminal Kitty
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))   -- File management
+
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(mail))          -- Mail Thunderbird
+--hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(browser))       -- Web browser
+hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(spotify))       -- Spotify
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd(radio))         -- Web radio
+hl.bind(mainMod .. " + U", hl.dsp.exec_cmd(sync))          -- Sync files Unison
+hl.bind(mainMod .. " + I", hl.dsp.exec_cmd(claude))        -- Claude Desktop
+
+
+hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))   -- dwindle only
+hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())         -- Pseudo window
 
 -- Inversion colonnes gauche/droite
 hl.bind(mainMod .. " + code:94",         hl.dsp.layout("flip"))   -- touche < >
@@ -379,6 +379,23 @@ end
 -- Example special workspace (scratchpad)
 hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
+hl.bind(mainMod .. " + Y", hl.dsp.workspace.toggle_special("spotify"))
+hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.window.move({ workspace = "special:spotify" }))
+hl.bind(mainMod .. " + T", hl.dsp.workspace.toggle_special("thunderbird"))
+hl.bind(mainMod .. " + SHIFT + T", hl.dsp.window.move({ workspace = "special:thunderbird" }))
+hl.bind(mainMod .. " + G", hl.dsp.workspace.toggle_special("thunderbird-edit"))
+
+-- Super + Échap : quitter l'espace spécial affiché
+hl.bind(mainMod .. " + A", function()
+    local w = hl.get_active_window()
+    if w and w.workspace and w.workspace.name then
+        local nom = w.workspace.name:match("^special:(.+)$")
+        if nom then
+            hl.dispatch(hl.dsp.workspace.toggle_special(nom))
+        end
+    end
+end)
+
 
 -- Scroll through existing workspaces with mainMod + scroll
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))

@@ -8,6 +8,16 @@ hl.window_rule({
   size   = "(monitor_w*0.4) (monitor_h*0.6)",
 })
 
+-- Spotify : espace spécial dédié, flottant, centré
+hl.window_rule({
+  name  = "spotify-special",
+  match = { class = "^([Ss]potify)$" },
+  workspace = "special:spotify",
+  float     = true,
+  size      = { 1600, 1000 },
+  center    = true,
+})
+
 
 -- Fenêtre principale de Thunderbird
 hl.window_rule({
@@ -16,20 +26,22 @@ hl.window_rule({
     class         = "^(org\\.mozilla\\.thunderbird.*|thunderbird)$",
     initial_title = "^Mozilla Thunderbird$",
   },
-  workspace = "special:magic",
+  workspace = "special:thunderbird",
   float     = true,
-  size      = { 2000, 1080 },
+  size      = { 2000, 1280 },
   center    = true,
 })
 
--- Fenêtre de rédaction
+-- Fenêtre de rédaction : espace spécial dédié
 hl.window_rule({
   name  = "thunderbird-redaction",
   match = {
     class         = "^(org\\.mozilla\\.thunderbird.*|thunderbird)$",
     initial_title = "^Rédaction du message$",
   },
-  float  = true,
-  size   = { 1200, 900 },
-  center = true,
+  workspace  = "special:thunderbird-edit",
+  float      = true,
+  size       = { 1200, 900 },
+  center     = true,
+  dim_around = true,
 })
