@@ -8,8 +8,9 @@
 --   centrale passe sur le côté selon l'ordre de remplissage.
 -- • Chaque bureau a son propre état (colonnes, largeurs, extension).
 -- • swapmaster      : échange RÉEL de places avec la fenêtre centrale
---                     (relancé depuis le centre → ramène la fenêtre précédente,
---                     y compris celle repoussée par une nouvelle fenêtre).
+--                     Relancé depuis le centre → ramène la dernière fenêtre
+--                     passée au centre (pile par bureau ; les fenêtres
+--                     fermées sont sautées).
 -- • move <dir>      : left/right fait passer la fenêtre d'une colonne de côté
 --                     à l'autre (sans toucher au centre) ; up/down la déplace
 --                     dans sa colonne.
@@ -40,8 +41,8 @@ local function new_state()
         center = nil,        -- identifiant de la fenêtre centrale
         left = {},           -- colonne gauche (de haut en bas)
         right = {},          -- colonne droite (de haut en bas)
-        left_w = 0.315,      -- largeur de la colonne gauche (fraction de l'écran)
-        right_w = 0.315,     -- largeur de la colonne droite (le centre prend le reste)
+        left_w = 0.30,      -- largeur de la colonne gauche (fraction de l'écran)
+        right_w = 0.30,     -- largeur de la colonne droite (le centre prend le reste)
         weight = {},         -- hauteur relative de chaque fenêtre de côté (1 par défaut)
         extend = nil,        -- nil | "left" | "right" : colonne recouverte par le centre
         moved = nil,         -- fenêtres déplacées par « extend » (pour les remettre)
@@ -50,7 +51,7 @@ local function new_state()
         opener = "right",    -- côté de la 2ᵉ fenêtre (la première de côté)
         first = "left",      -- ensuite, côté prioritaire à égalité : "left" ou "right"
         single_full = false, -- true : une fenêtre seule occupe tout l'écran
-        last_swap = nil,     -- { id } : fenêtre à ramener au centre (Super + Entrée depuis le centre)
+        history = {},        -- pile des anciennes fenêtres centrales (la plus récente en tête)
         pending = {},        -- liste de { col, after } : places réservées par « split »
         count = 0,
     }
@@ -139,6 +140,25 @@ local function sides()
     return state.left, state.right
 end
 
+-- Pile des anciennes fenêtres centrales
+local function forget(id)                 -- retire une fenêtre de la pile
+    local k = index_of(state.history, id)
+    if k then table.remove(state.history, k) end
+end
+
+local function remember(id)               -- empile une fenêtre qui quitte le centre
+    if not id then return end
+    forget(id)
+    table.insert(state.history, 1, id)
+end
+
+-- Change la fenêtre centrale en empilant l'ancienne
+local function set_center(id)
+    remember(state.center)
+    forget(id)
+    state.center = id
+end
+
 ---------------------------------------------------------------- synchronisation
 
 local function sync(ctx)
@@ -163,6 +183,13 @@ local function sync(ctx)
     if state.center and not present[state.center] then
         state.center = nil
     end
+
+    -- la pile ne garde que les fenêtres encore présentes sur ce bureau
+    local h = {}
+    for _, id in ipairs(state.history) do
+        if present[id] then table.insert(h, id) end
+    end
+    state.history = h
 
     -- centre vide : on le laisse vide (keep_empty), sinon on promeut la
     -- première fenêtre du côté prioritaire, puis de l'autre
@@ -208,30 +235,21 @@ local function sync(ctx)
     end
 
     -- placer les nouvelles fenêtres
-    local pushed = nil   -- ancien centre repoussé par une nouvelle fenêtre
     for _, target in ipairs(ctx.targets) do
         local id = target_id(target)
         if not locate(id) then
             if not state.center then
                 state.center = id
             elseif state.new_on_center then
-                pushed = state.center
                 to_side(state.center)              -- l'ancien centre passe sur le côté
-                state.center = id
+                set_center(id)
             else
                 to_side(id)
             end
         end
     end
 
-    if n ~= state.count then
-        state.last_swap = nil -- ouverture/fermeture : on oublie l'échange
-        state.count = n
-    end
-    -- nouvelle fenêtre au centre : Super + Entrée y ramène l'ancienne
-    if pushed then
-        state.last_swap = { id = pushed }
-    end
+    state.count = n
 
     return targets
 end
@@ -334,25 +352,24 @@ hl.layout.register("mastercenter", {
         if command == "swapmaster" then
             if not where then return true end
             if where == "center" then
-                local s = state.last_swap
-                if s then
-                    local col_name, k = locate(s.id)
+                -- ramène la fenêtre la plus récente de la pile encore sur le côté
+                for _, prev in ipairs(state.history) do
+                    local col_name, k = locate(prev)
                     if col_name == "left" or col_name == "right" then
-                        local col = column(col_name)
-                        state.last_swap = { id = state.center }   -- relancer → rééchange
-                        state.center, col[k] = col[k], state.center
-                    else
-                        state.last_swap = nil
+                        local col, old = column(col_name), state.center
+                        set_center(prev)
+                        col[k] = old                   -- l'ancien centre prend sa place
+                        break
                     end
                 end
             elseif not state.center then
                 -- centre vide : la fenêtre y va simplement
-                state.center = table.remove(column(where), i)
-                state.last_swap = nil
+                table.remove(column(where), i)
+                set_center(id)
             else
-                local col = column(where)
-                state.last_swap = { id = state.center }   -- pour revenir en arrière
-                state.center, col[i] = col[i], state.center
+                local col, old = column(where), state.center
+                set_center(id)
+                col[i] = old
             end
 
         ---------------------------------------------------- move
@@ -378,7 +395,6 @@ hl.layout.register("mastercenter", {
                     col[i], col[j] = col[j], col[i]
                 end
             end
-            state.last_swap = nil
 
         ---------------------------------------------------- split (sur demande)
         elseif command == "split" then
@@ -434,7 +450,6 @@ hl.layout.register("mastercenter", {
                 restore()                     -- direction opposée : retour au normal
             end
             state.pending = {}
-            state.last_swap = nil
 
         ---------------------------------------------------- flip
         -- inverse les colonnes gauche et droite (ordre vertical conservé)

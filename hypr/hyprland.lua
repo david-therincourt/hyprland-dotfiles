@@ -62,6 +62,7 @@ hl.on("hyprland.start", function ()
   hl.exec_cmd("systemctl --user start hyprpolkitagent")  -- demandes de mot de passe admin
   hl.exec_cmd("nm-applet --indicator")                   -- réseau dans la barre
   hl.exec_cmd("wl-paste --watch cliphist store")         -- historique du presse-papiers
+  hl.exec_cmd("busctl call org.freedesktop.Accounts /org/freedesktop/Accounts/User$(id -u) org.freedesktop.Accounts.User SetSession s gnome") -- GDM à Gnome par défaut
 end)
 
 
